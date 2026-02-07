@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="be">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Гульня “Дзень роднай мовы” — 2 каманды</title>
+  <style>
+    :root { --radius: 18px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#f7f7fb; color:#111; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 18px; }
+    .card { background: #fff; border-radius: var(--radius); padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,.07); }
+    h1 { margin: 0 0 10px; font-size: 22px; }
+    .sub { margin: 0 0 16px; opacity: .75; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .score { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 12px; border-radius: var(--radius); border: 1px solid #eee; }
+    .teamName { font-weight: 700; }
+    .stars { font-size: 20px; line-height: 1.2; word-break: break-word; }
+    .turn { font-weight: 700; padding: 8px 12px; border-radius: 999px; background:#111; color:#fff; display:inline-block; }
+    .qbox { margin-top: 14px; padding: 14px; border-radius: var(--radius); background: #fafafa; border: 1px solid #eee; }
+    .qtop { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap: wrap; }
+    .qnum { font-weight:700; }
+    .question { margin: 10px 0 12px; font-size: 18px; font-weight: 700; }
+    .opts { display:grid; grid-template-columns: 1fr; gap: 10px; }
+    button.opt {
+      text-align:left; width: 100%;
+      border-radius: 14px; border: 1px solid #ddd;
+      padding: 12px; background:#fff; cursor:pointer;
+      font-size: 16px;
+    }
+    button.opt:hover { border-color:#bbb; }
+    button.opt[disabled] { cursor:not-allowed; opacity:.75; }
+    .controls { margin-top: 12px; display:flex; gap:10px; flex-wrap: wrap; }
+    button.ctrl {
+      border-radius: 14px; border: 1px solid #111;
+      padding: 10px 14px; background:#111; color:#fff; cursor:pointer; font-weight:700;
+    }
+    button.ctrl.secondary { background:#fff; color:#111; }
+    .msg { margin-top: 10px; font-weight: 700; }
+    .msg.good { color: #0a7a2e; }
+    .msg.bad { color: #b00020; }
+    .footer { margin-top: 12px; font-size: 13px; opacity:.7; }
+    .hidden { display:none !important; }
+    .setup label { display:block; font-weight:700; margin: 10px 0 6px; }
+    .setup input {
+      width: 100%; padding: 10px 12px; border-radius: 14px; border:1px solid #ddd; font-size: 16px;
+    }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fff; font-weight:700; }
+    .winner { font-size: 18px; font-weight: 800; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="setupCard">
+    <h1>Гульня “Дзень роднай мовы”</h1>
+    <p class="sub">2 каманды • 20 пытанняў • 4 варыянты адказу • за правільны адказ — 1 зорка</p>
+
+    <div class="setup">
+      <div class="row">
+        <div>
+          <label for="t1">Назва каманды 1</label>
+          <input id="t1" value="Каманда 1" maxlength="20" />
+        </div>
+        <div>
+          <label for="t2">Назва каманды 2</label>
+          <input id="t2" value="Каманда 2" maxlength="20" />
+        </div>
+      </div>
+      <div class="controls">
+        <button class="ctrl" id="startBtn">Пачаць гульню</button>
+      </div>
+      <p class="footer">Парада: гуляйце па чарзе — пасля адказу ход пераходзіць да другой каманды.</p>
+    </div>
+  </div>
+
+  <div class="card hidden" id="gameCard">
+    <div class="qtop">
+      <div>
+        <div class="pill">Ход: <span class="turn" id="turnLabel"></span></div>
+      </div>
+      <div class="pill"><span id="progressLabel"></span></div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="score">
+        <div>
+          <div class="teamName" id="team1Name"></div>
+          <div style="opacity:.75;font-size:13px;">Зоркі</div>
+        </div>
+        <div class="stars" id="team1Stars">☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆</div>
+      </div>
+      <div class="score">
+        <div>
+          <div class="teamName" id="team2Name"></div>
+          <div style="opacity:.75;font-size:13px;">Зоркі</div>
+        </div>
+        <div class="stars" id="team2Stars">☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆</div>
+      </div>
+    </div>
+
+    <div class="qbox">
+      <div class="qnum" id="qNum"></div>
+      <div class="question" id="qText"></div>
+      <div class="opts" id="opts"></div>
+      <div class="msg hidden" id="msg"></div>
+
+      <div class="controls">
+        <button class="ctrl secondary" id="nextBtn" disabled>Наступнае пытанне</button>
+        <button class="ctrl secondary" id="skipBtn">Прапусціць (без зоркі)</button>
+        <button class="ctrl secondary" id="restartBtn">Пачаць нанова</button>
+      </div>
+      <p class="footer">Пасля кожнага адказу ход аўтаматычна пераходзіць да другой каманды.</p>
+    </div>
+  </div>
+
+  <div class="card hidden" id="endCard">
+    <h1>Фініш!</h1>
+    <p class="sub">Вы адказалі на ўсе 20 пытанняў.</p>
+    <p class="winner" id="winnerText"></p>
+    <div class="controls">
+      <button class="ctrl" id="playAgainBtn">Згуляць яшчэ раз</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 20 простых пытанняў (6–10 гадоў), 4 варыянты адказу
+  // a = індэкс правільнага адказу (0..3)
+  const QUESTIONS = [
+    { q:"Якая літара стаіць першай у алфавіце?", o:["А","М","Я","К"], a:0 },
+    { q:"Якое слова — ветлівае прывітанне?", o:["Дзякуй","Добры дзень","Прабач","Калі ласка"], a:1 },
+    { q:"Што кажуць, калі табе дапамаглі?", o:["Дзякуй","Прывітанне","Бывай","Смаката"], a:0 },
+    { q:"Які знак ставяць у канцы пытання?", o:["Кропка","Коска","Пытальнік","Дужкі"], a:2 },
+    { q:"Якое слова абазначае “кніга для вучня”?", o:["Сшытак","Падручнік","Мяч","Лыжка"], a:1 },
+    { q:"Якое слова — назва дня пасля панядзелка?", o:["Аўторак","Субота","Нядзеля","Пятніца"], a:0 },
+    { q:"Як правільна называецца чалавек, які вучыць дзяцей у школе?", o:["Доктар","Повар","Настаўнік","Кіроўца"], a:2 },
+    { q:"Якое слова НЕ пра надвор’е?", o:["Дождж","Вецер","Снег","Аловак"], a:3 },
+    { q:"Якая пара года ідзе пасля вясны?", o:["Зіма","Лета","Восень","Ноч"], a:1 },
+    { q:"Што мы чытаем у бібліятэцы?", o:["Кнігі","Талеркі","Камяні","Цацкі"], a:0 },
+    { q:"Якое слова значыць “сябраваць і жыць дружна”?", o:["Сварка","Дружба","Бяда","Шум"], a:1 },
+    { q:"Што трэба зрабіць перад тым, як адказаць?", o:["Паслухаць пытанне","Паскакаць","Заснуць","Пабегчы"], a:0 },
+    { q:"Якое слова — назва жывёлы?", o:["Кот","Стол","Акуляры","Вакно"], a:0 },
+    { q:"Якое слова — назва колеру?", o:["Зялёны","Салодкі","Высокі","Хутка"], a:0 },
+    { q:"Якое слова значыць “прабачэнне”?", o:["Прабач","Вітаю","Сардэчна","Цудоўна"], a:0 },
+    { q:"Які прадмет патрэбны, каб пісаць?", o:["Ручка","Відэлец","Падушка","Сняжок"], a:0 },
+    { q:"Што ставяць паміж словамі ў сказе, калі робяць пералік?", o:["Коску","Пытальнік","Двукроп’е","Кропку"], a:0 },
+    { q:"Якое слова — супрацьлеглае да “вялікі”?", o:["Доўгі","Малы","Цёплы","Сумны"], a:1 },
+    { q:"Якое слова — назва пачуцця?", o:["Радасць","Крэсла","Дзверы","Лясок"], a:0 },
+    { q:"Якое правіла дапамагае ў зносінах?", o:["Гаварыць ветліва","Крычаць на ўсіх","Не слухаць іншых","Перабіваць"], a:0 },
+  ];
+
+  // DOM
+  const setupCard = document.getElementById('setupCard');
+  const gameCard  = document.getElementById('gameCard');
+  const endCard   = document.getElementById('endCard');
+
+  const t1Input = document.getElementById('t1');
+  const t2Input = document.getElementById('t2');
+
+  const startBtn = document.getElementById('startBtn');
+  const nextBtn  = document.getElementById('nextBtn');
+  const skipBtn  = document.getElementById('skipBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  const team1Name = document.getElementById('team1Name');
+  const team2Name = document.getElementById('team2Name');
+  const team1Stars = document.getElementById('team1Stars');
+  const team2Stars = document.getElementById('team2Stars');
+
+  const turnLabel = document.getElementById('turnLabel');
+  const progressLabel = document.getElementById('progressLabel');
+
+  const qNum = document.getElementById('qNum');
+  const qText = document.getElementById('qText');
+  const opts = document.getElementById('opts');
+  const msg = document.getElementById('msg');
+  const winnerText = document.getElementById('winnerText');
+
+  // State
+  let order = [];          // shuffled indices
+  let idx = 0;             // question pointer
+  let turn = 0;            // 0 = team1, 1 = team2
+  let stars = [0,0];
+  let locked = false;
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function starsString(n){
+    // show up to 20 stars for nice UI
+    return "★".repeat(n) + "☆".repeat(Math.max(0, 20-n));
+  }
+
+  function setTurnLabel(){
+    turnLabel.textContent = turn === 0 ? team1Name.textContent : team2Name.textContent;
+  }
+
+  function setProgress(){
+    progressLabel.textContent = `Пытанне ${idx+1} з ${QUESTIONS.length}`;
+  }
+
+  function setScores(){
+    team1Stars.textContent = starsString(stars[0]);
+    team2Stars.textContent = starsString(stars[1]);
+  }
+
+  function showMessage(text, good){
+    msg.textContent = text;
+    msg.classList.remove('hidden','good','bad');
+    msg.classList.add(good ? 'good' : 'bad');
+  }
+
+  function clearMessage(){
+    msg.classList.add('hidden');
+    msg.textContent = "";
+    msg.classList.remove('good','bad');
+  }
+
+  function renderQuestion(){
+    locked = false;
+    nextBtn.disabled = true;
+    clearMessage();
+
+    const qObj = QUESTIONS[order[idx]];
+    qNum.textContent = `Пытанне №${idx+1}`;
+    qText.textContent = qObj.q;
+
+    opts.innerHTML = "";
+    qObj.o.forEach((optText, i) => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.type = 'button';
+      b.textContent = `${String.fromCharCode(65+i)}. ${optText}`;
+      b.addEventListener('click', () => answer(i));
+      opts.appendChild(b);
+    });
+
+    setTurnLabel();
+    setProgress();
+    setScores();
+  }
+
+  function disableOptions(){
+    [...opts.querySelectorAll('button.opt')].forEach(b => b.disabled = true);
+  }
+
+  function answer(chosen){
+    if(locked) return;
+    locked = true;
+
+    const qObj = QUESTIONS[order[idx]];
+    const correct = qObj.a;
+
+    disableOptions();
+
+    if(chosen === correct){
+      stars[turn] += 1;
+      setScores();
+      showMessage(`Правільна! ${turnLabel.textContent} атрымлівае 1 зорку.`, true);
+    } else {
+      showMessage(`Няправільна. Правільны адказ: ${String.fromCharCode(65+correct)}. ${qObj.o[correct]}`, false);
+    }
+
+    // switch turn after answering
+    turn = turn === 0 ? 1 : 0;
+    setTurnLabel();
+
+    nextBtn.disabled = false;
+  }
+
+  function next(){
+    if(idx < QUESTIONS.length-1){
+      idx += 1;
+      renderQuestion();
+    } else {
+      finish();
+    }
+  }
+
+  function skip(){
+    if(locked) return; // if already answered, use next
+    // switch turn, no stars
+    showMessage(`Прапуск. Зорка не налічваецца. Ход пераходзіць далей.`, false);
+    disableOptions();
+    locked = true;
+    turn = turn === 0 ? 1 : 0;
+    setTurnLabel();
+    nextBtn.disabled = false;
+  }
+
+  function finish(){
+    gameCard.classList.add('hidden');
+    endCard.classList.remove('hidden');
+
+    const t1 = team1Name.textContent;
+    const t2 = team2Name.textContent;
+
+    if(stars[0] > stars[1]){
+      winnerText.textContent = `Перамагла ${t1}! Вынік: ${stars[0]} : ${stars[1]}`;
+    } else if(stars[1] > stars[0]){
+      winnerText.textContent = `Перамагла ${t2}! Вынік: ${stars[1]} : ${stars[0]}`;
+    } else {
+      winnerText.textContent = `Нічыя! Вынік: ${stars[0]} : ${stars[1]}`;
+    }
+  }
+
+  function start(){
+    const name1 = (t1Input.value || "Каманда 1").trim().slice(0,20);
+    const name2 = (t2Input.value || "Каманда 2").trim().slice(0,20);
+
+    team1Name.textContent = name1;
+    team2Name.textContent = name2;
+
+    order = shuffle([...Array(QUESTIONS.length).keys()]);
+    idx = 0;
+    turn = 0;
+    stars = [0,0];
+    locked = false;
+
+    setupCard.classList.add('hidden');
+    endCard.classList.add('hidden');
+    gameCard.classList.remove('hidden');
+
+    renderQuestion();
+  }
+
+  function restart(){
+    // back to setup
+    gameCard.classList.add('hidden');
+    endCard.classList.add('hidden');
+    setupCard.classList.remove('hidden');
+  }
+
+  // Events
+  startBtn.addEventListener('click', start);
+  nextBtn.addEventListener('click', next);
+  skipBtn.addEventListener('click', skip);
+  restartBtn.addEventListener('click', restart);
+  playAgainBtn.addEventListener('click', () => {
+    endCard.classList.add('hidden');
+    start();
+  });
+</script>
+</body>
+</html>
